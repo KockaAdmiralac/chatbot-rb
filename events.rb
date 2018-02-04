@@ -1,14 +1,9 @@
 module Chatbot
   module Events
-    def on_socket_connect
-      $logger.info 'Connected to chat!'
-    end
-
     # @param [String] msg
     def on_socket_message(msg)
       begin
         # @type [Hash]
-        $logger.debug msg
         json = JSON.parse(msg)[1]
         if json['event'] == 'disableReconnect' or json['event'] == 'forceReconnect' or !json.key? 'data'
           quit
@@ -25,7 +20,7 @@ module Chatbot
         begin
           self.method("on_chat_#{json['event']}".to_sym).call(json['data'])
         rescue NameError
-          $logger.debug 'ignoring un-used event'
+          # rip
         end
         @handlers[json['event'].to_sym].each { |handler| handler.call(json['data']) } if json['event'] != 'message' and @handlers.key? json['event'].to_sym
       rescue => e

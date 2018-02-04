@@ -1,4 +1,3 @@
-# encoding: ASCII-8BIT
 require 'json'
 module JSON
   def self.is_json?(foo)
@@ -39,7 +38,7 @@ class User
       when :staff
         @staff or is? :dev
       when :dev
-        @name.eql? 'Sactage'
+        @name.eql? 'KockaAdmiralac'
       else
         false
     end

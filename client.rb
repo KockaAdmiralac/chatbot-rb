@@ -25,7 +25,6 @@ module Chatbot
         $logger.fatal "Config: #{CONFIG_FILE} not found!"
         exit
       end
-      $logger.debug 'init'
       @config = YAML.load_file(File.join(__dir__, CONFIG_FILE))
       @base_url = @config.key?('dev') ? 'http://localhost:8080' : "http://#{@config['wiki']}.wikia.com"
       @api = MediaWiki::Gateway.new @base_url + '/api.php'
@@ -74,7 +73,6 @@ module Chatbot
 
     # Fetch important data from chat
     def fetch_chat_info
-      $logger.debug 'fetch_chat_info'
       # @type [HTTParty::Response]
       res = HTTParty.get("#{@base_url}/wikia.php?controller=Chat&format=json", :headers => @headers)
       # @type [Hash]
@@ -104,7 +102,6 @@ module Chatbot
         self.class.base_uri "http://#{data[:chatServerHost]}/"
       end
       res = get
-      $logger.debug res
       spl = res.match(/\d+:0(.*)$/)
       if spl.nil?
         @running = false
@@ -125,7 +122,6 @@ module Chatbot
     # Perform a POST request to the chat server with the specified body
     # @param [Hash] body
     def post(body)
-      $logger.debug body.to_json
       body = Util::format_message(body == :ping ? '2' : '42' + ["message", {:id => nil, :attrs => body}.to_json].to_json)
       opts = @request_options.merge({:time_cachebuster => Time.now.to_ms.to_s + '-' + @time_cachebuster.to_s})
       @time_cachebuster += 1
@@ -138,17 +134,23 @@ module Chatbot
         begin
           res = get
           body = res.body
-          $logger.debug body
-          spl = body.match(/\d+:42(.*)$/)
-          if spl.nil? and body.include? 'Session ID unknown'
+          if body.include? 'Session ID unknown'
             @running = false
             break
           end
-          next unless spl
-          spl.captures.each do |message|
-            @threads << Thread.new(message) {
-              on_socket_message(message)
-            }
+          while body.length > 0
+            index = body.index(':')
+            msgend = index + body[0..index].to_i
+            msg = body[index + 1..msgend]
+            body = body[msgend + 1..-1]
+            spl = msg.match(/^42(.*)$/)
+            if spl
+              spl.captures.each do |message|
+                @threads << Thread.new(message) do
+                  on_socket_message(message)
+                end
+              end
+            end
           end
         rescue => e
           $logger.fatal e
