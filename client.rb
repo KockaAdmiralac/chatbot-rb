@@ -14,7 +14,7 @@ module Chatbot
     include HTTParty
     include Events
 
-    USER_AGENT = 'sactage/chatbot-rb v2.2.0 (fyi socket.io sucks) [http://github.com/sactage/chatbot-rb]'
+    USER_AGENT = 'sactage/chatbot-rb v2.2.0 (fyi socket.io sucks) [https://github.com/sactage/chatbot-rb]'
     CONFIG_FILE = 'config.yml'
 
     attr_accessor :session, :clientid, :handlers, :config, :userlist, :api, :threads
@@ -97,9 +97,9 @@ module Chatbot
           :serverId => @server
       }
       if @config.key?('dev')
-        self.class.base_uri "http://#{data[:chatServerHost]}:#{data[:chatServerPort]}/"
+        self.class.base_uri "https://#{data[:chatServerHost]}:#{data[:chatServerPort]}/"
       else
-        self.class.base_uri "http://#{data[:chatServerHost]}/"
+        self.class.base_uri "https://#{data[:chatServerHost]}/"
       end
       res = get
       spl = res.match(/\d+:0(.*)$/)
