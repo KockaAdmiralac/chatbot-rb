@@ -14,7 +14,7 @@ module Chatbot
     include HTTParty
     include Events
 
-    USER_AGENT = 'sactage/chatbot-rb v2.2.0 (fyi socket.io sucks) [https://github.com/sactage/chatbot-rb]'
+    USER_AGENT = 'KockaAdmiralac/chatbot-rb v2.2.0 (fyi socket.io sucks) [https://github.com/KockaAdmiralac/chatbot-rb]'
     CONFIG_FILE = 'config.yml'
 
     attr_accessor :session, :clientid, :handlers, :config, :userlist, :api, :threads
