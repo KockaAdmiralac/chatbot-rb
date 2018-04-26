@@ -156,7 +156,7 @@ class WikiLog
   # @return [String]
   def get_page_contents(title)
     res = HTTParty.get(
-        "http://#{@client.config['wiki']}.wikia.com/index.php",
+        "https://#{@client.config['wiki']}.wikia.com/index.php",
         :query => {
             :title => title,
             :action => 'raw',

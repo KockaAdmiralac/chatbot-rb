@@ -26,7 +26,7 @@ module Chatbot
         exit
       end
       @config = YAML.load_file(File.join(__dir__, CONFIG_FILE))
-      @base_url = @config.key?('dev') ? 'http://localhost:8080' : "http://#{@config['wiki']}.wikia.com"
+      @base_url = @config.key?('dev') ? 'https://localhost:8080' : "https://#{@config['wiki']}.wikia.com"
       @api = MediaWiki::Gateway.new @base_url + '/api.php'
       @api.login(@config['user'], @config['password'])
       @time_cachebuster = 0
