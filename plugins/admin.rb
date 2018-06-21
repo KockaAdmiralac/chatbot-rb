@@ -60,7 +60,7 @@ class Chatbot::Admin
 
   # @param [User] user
   def source(user)
-    @client.send_msg "#{user.name}: My source code can be seen at https://github.com/sactage/chatbot-rb - feel free to contribute!"
+    @client.send_msg "#{user.name}: My source code can be seen at https://github.com/KockaAdmiralac/chatbot-rb - feel free to contribute!"
   end
 
 end
