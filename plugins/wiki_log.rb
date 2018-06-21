@@ -110,7 +110,7 @@ class WikiLog
   # @param [Hash] data
   def on_ban(data)
     @buffer_mutex.synchronize do
-      @buffer << "\n" + Util::ts + " -!- #{data['attrs']['kickedUserName']} was banned from Special:Chat by #{data['attrs']['moderatorName']}"
+      @buffer << "\n" + Util::ts + " -!- #{data['attrs']['kickedUserName']} was #{data['attrs']['time'] == 0 ? 'unbanned' : 'banned'} from Special:Chat by #{data['attrs']['moderatorName']}"
     end
   end
 
