@@ -19,6 +19,8 @@ class Chatbot::AntiSpam
     @reason = @config['reason'] || 'Misbehaving in chat'
     @message = @config['warning'] || '%s: Please behave in chat'
     @regex = (@config['regex'] || []).map {|r| Regexp.new(r, 'im') }
+    @caps = @config['caps'] || 101
+    @caps_length = @config['caps_length'] || 7
     if File.exists? 'antispam.yml'
       @data = YAML::load_file 'antispam.yml'
     else
@@ -27,11 +29,11 @@ class Chatbot::AntiSpam
     end
     @flood = {}
   end
-  
+
   def record
     File.open('antispam.yml', 'w+') {|f| f.write(@data.to_yaml) }
   end
-  
+
   # @param [User] user
   # @param [String] message
   def check(user, message)
@@ -43,13 +45,21 @@ class Chatbot::AntiSpam
     # Spam check
     @words.each {|w| execute(user) if message.include? w }
     @regex.each {|r| execute(user) if r =~ message }
+    # Caps check
+    caps_count = 0
+    for i in 0...message.length
+      if message[i].downcase != message[i]
+        caps_count += 1
+      end
+    end
+    execute(user) if caps_count.to_f / message.length * 100.0 >= @caps and message.length >= @caps_length
     # Flood check
     time = Time.now.to_i
     @flood[user.name] << time
     @flood[user.name].shift if @flood[user.name].length > @flood_size
     execute(user) if @flood[user.name].length >= @flood_size and time - @flood[user.name][0] <= @flood_time
   end
-  
+
   # @param [User] user
   def execute(user)
     @data[user.name] += 1

@@ -11,8 +11,6 @@ Installation
 ============
 To run a bot using this framework, Ruby 2.1+ is expected. I develop on the latest stable version (2.1.3 at the time of writing), and generally will not accommodate any problems that are only affect older versions of Ruby.
 
-*Note*: The framework does not currently work on Windows with Ruby 2.1.3 due to an issue with `mediawiki-gateway` and the `ffi` gem.
-
 This framework requires [HTTParty](https://rubygems.org/gems/httparty) and [mediawiki-gateway](https://rubygems.org/gems/mediawiki-gateway). You can install them both with `[sudo] gem install httparty mediawiki-gateway`.
 
 Running

@@ -31,7 +31,7 @@ module Chatbot
       else
         @base_url = "https://#{@config['wiki']}.wikia.com"
       end
-      @api = MediaWiki::Gateway.new @base_url + '/api.php'
+      @api = MediaWiki::Gateway.new "#{@base_url}/api.php"
       @api.login(@config['user'], @config['password'])
       @time_cachebuster = 0
       @headers = {
@@ -119,7 +119,7 @@ module Chatbot
     # @return [HTTParty::Response]
     def get(path: '/socket.io/')
       opts = @request_options.merge({:time_cachebuster => Time.now.to_ms.to_s + '-' + @time_cachebuster.to_s})
-      @time_cachebuster +=1
+      @time_cachebuster += 1
       self.class.get(path, :query => opts, :headers => @headers)
     end
 
