@@ -9,6 +9,8 @@ class Chatbot::Admin
   match /^unignore (.*)/, :method => :unignore
   match /^commands/, :method => :get_commands
   match /^source|^src|^git(?:hub)?/, :method => :source
+  match /^kick (.*)/, :method => :kick
+  match /^ban ([^\s]+) (\d+)\s?(.*)/, :method => :ban
 
   # @param [User] user
   def quit(user)
@@ -55,6 +57,25 @@ class Chatbot::Admin
         User.new(target).unignore
       end
       @client.send_msg "#{user.name}: I'll now listen to all messages from #{target}."
+    end
+  end
+
+  # @param [User] user
+  # @param [String] target
+  def kick(user, target)
+    if user.is? :mod
+      @client.kick target
+    end
+  end
+
+  # @param [User] user
+  # @param [String] target
+  # @param [String] length
+  # @param [String] reason
+  def ban(user, target, length, reason)
+    if user.is? :mod
+      puts target, length.to_i, reason
+      @client.ban target, length.to_i, reason
     end
   end
 
