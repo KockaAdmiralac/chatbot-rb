@@ -1,4 +1,5 @@
-require 'httparty'
+require 'net/http'
+require 'uri'
 require_relative '../plugin'
 
 class Chatbot::Discord
@@ -16,7 +17,13 @@ class Chatbot::Discord
   def initialize(bot)
     super(bot)
     config = bot.config['discord']
-    @url = "https://discordapp.com/api/webhooks/#{config['id']}/#{config['token']}"
+    @uri = URI.parse("https://discordapp.com/api/webhooks/#{config['id']}/#{config['token']}")
+    @poster = Net::HTTP.new(@uri.host, @uri.port)
+    @poster.use_ssl = true
+    @headers = {
+      'Content-Type': 'application/json',
+      'User-Agent': Chatbot::Client::USER_AGENT
+    }
   end
 
   def on_bot_quit(*a)
@@ -51,10 +58,12 @@ class Chatbot::Discord
   end
 
   def send(message, user = "")
-    HTTParty.post(@url, :body => {
+    post = Net::HTTP::Post.new(@uri.request_uri, @headers)
+    post.body = {
       :content => message.gsub('@', '@​').gsub('discord.gg', 'discord.​gg'),
       :username => user
-    })
+    }.to_json
+    @poster.request(post)
   end
 
 end

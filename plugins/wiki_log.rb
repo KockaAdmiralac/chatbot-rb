@@ -1,4 +1,3 @@
-require 'httparty'
 require_relative '../plugin'
 
 class WikiLog
@@ -25,17 +24,20 @@ class WikiLog
     @buffer_mutex = Mutex.new
     @log_thread = make_thread
     @last_log = nil
-    unless @client.config.key? :wikilog
-      @client.config[:wikilog] = {
-          :log_interval => 3600,
-          :title => '',
-          :type => :daily,
-          :fifo_threshold => 5000,
-          :category => 'Chat logs'
-      }
-      @client.save_config
+    @options = {
+      :log_interval => 3600,
+      :title => 'Project:Chat/Logs/%d %B %Y',
+      :type => :daily,
+      :fifo_threshold => 5000,
+      :category => 'Chat logs'
+    }
+    if bot.config.key? :wikilog
+      @options = @options.merge(bot.config[:wikilog])
     end
-    @options = @client.config[:wikilog]
+    @headers = {
+      'Cookie' => bot.access_header,
+      'User-Agent' => bot.headers['User-Agent']
+    }
   end
 
   # @return [Thread]
@@ -58,9 +60,17 @@ class WikiLog
   def update_logs
     @last_log = Time.now.utc
     title = Time.now.utc.strftime @options[:title]
-    text = @buffer.dup.gsub('<', '&lt;').gsub('>', '&gt;') # Ideally, this is inside a buffer lock somewhere...
+    # Ideally, this is inside a buffer lock somewhere...
+    text = @buffer.dup.gsub('<', '&lt;').gsub('>', '&gt;')
     @buffer = ''
-    page_content = get_page_contents(title)
+    query = get_page_contents(title)
+    id = query[:pageids][0]
+    page = query[:pages][id.to_sym]
+    page_content = ''
+    if id != '-1'
+      page_content = page[:revisions][0][:*]
+    end
+    token = page[:edittoken]
     if @options[:type].eql? :fifo
       if page_content.scan(/\n/).size >= @options[:fifo_threshold]
         text = "<pre class=\"ChatLog\">#{text}\n</pre>\n[[Category:#{@options[:category]}]]"
@@ -74,7 +84,18 @@ class WikiLog
         text = page_content.gsub('</pre>', '').gsub("\n[[Category:#{@options[:category]}|", "#{text}</pre>\n[[Category:#{@options[:category]}|")
       end
     end
-    @client.api.edit title, text, :bot => 1, :minor => 1, :summary => 'Updating chat logs'
+    post = Net::HTTP::Post.new("#{@client.base_uri.path}/api.php", @headers)
+    post.body = URI.encode_www_form({
+      :action => 'edit',
+      :bot => 1,
+      :minor => 1,
+      :title => title,
+      :text => text,
+      :format => 'json',
+      :token => token,
+      :summary => 'Updating chat logs'
+    })
+    @client.api.request(post)
   end
 
   # @param [User] user
@@ -151,18 +172,23 @@ class WikiLog
     end
   end
 
-  # Gets the current text of a page - @client.api.get() will return nil and generally screw things up
+  # Gets the current text of a page
   # @param [String] title
   # @return [String]
   def get_page_contents(title)
-    res = HTTParty.get(
-        "https://#{@client.config['wiki']}.wikia.com/index.php",
-        :query => {
-            :title => title,
-            :action => 'raw',
-            :cb => rand(100*100*100)
-        }
-    )
-    res.body
+    JSON.parse( 
+      @client.api.get("#{@client.base_uri.path}/api.php?#{URI.encode_www_form({
+        :action => 'query',
+        :prop => 'info|revisions',
+        :titles => title,
+        :rvprop => 'content',
+        :intoken => 'edit',
+        :indexpageids => 1,
+        :format => 'json',
+        :cb => rand(1000000)
+      })}", @headers).body,
+      :symbolize_names => true
+    )[:query]
   end
+
 end

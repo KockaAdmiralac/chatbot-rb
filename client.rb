@@ -1,6 +1,8 @@
-require 'httparty'
-require 'media_wiki'
+require 'json'
 require 'logger'
+require 'net/http'
+require 'uri'
+require 'yaml'
 require_relative './plugin'
 require_relative './util'
 require_relative './events'
@@ -9,16 +11,15 @@ $logger = Logger.new(STDERR)
 $logger.level = Logger::WARN
 
 module Chatbot
-  # An HTTP client capable of connecting to Wikia's Special:Chat product.
+  # An HTTP client capable of connecting to Fandom's Special:Chat product.
   class Client
-    include HTTParty
     include Events
 
     USER_AGENT = 'KockaAdmiralac/chatbot-rb v2.2.0 (fyi socket.io sucks) [https://github.com/KockaAdmiralac/chatbot-rb]'
     CONFIG_FILE = 'config.yml'
 
-    attr_accessor :session, :clientid, :handlers, :config, :userlist, :api, :threads
-    attr_reader :plugins
+    attr_accessor :config, :handlers, :threads, :userlist
+    attr_reader :access_header, :api, :base_uri, :headers, :plugins
 
     def initialize
       unless File.exists? CONFIG_FILE
@@ -26,21 +27,34 @@ module Chatbot
         exit
       end
       @config = YAML.load_file(File.join(__dir__, CONFIG_FILE))
-      if @config['wiki'].include? '.'
-        @base_url = "http://#{@config['wiki']}.wikia.com"
-      else
-        @base_url = "https://#{@config['wiki']}.wikia.com"
+      if @config['domain'].nil? or @config['domain'].length == 0
+        @config['domain'] = 'wikia.com'
       end
-      @api = MediaWiki::Gateway.new "#{@base_url}/api.php"
-      @api.login(@config['user'], @config['password'])
+      if @config['wiki'].include? '.'
+        @base_uri = URI.parse("http://#{@config['wiki']}.#{@config['domain']}")
+      elsif @config['lang']
+        @base_uri = URI.parse("https://#{@config['wiki']}.#{@config['domain']}/#{@config['lang']}")
+      else
+        @base_uri = URI.parse("https://#{@config['wiki']}.#{@config['domain']}")
+      end
+      @api = Net::HTTP.new(@base_uri.host, @base_uri.port)
+      if @base_uri.port == 443
+        @api.use_ssl = true
+      end
+      res = Net::HTTP.post_form(URI("https://services.#{@config['domain']}/auth/token"), {
+        :username => @config['user'],
+        :password => @config['password']
+      })
+      @access_header = res['Set-Cookie']
       @time_cachebuster = 0
       @headers = {
-          'User-Agent' => USER_AGENT,
-          'Cookie' => @api.cookies.map { |k, v| "#{k}=#{v};" }.join(' '),
-          'Content-Type' => 'text/plain;charset=UTF-8',
-          'Accept' => '*/*',
-          'Pragma' => 'no-cache',
-          'Cache-Control' => 'no-cache'
+        'User-Agent' => USER_AGENT,
+        'Cookie' => @access_header,
+        'Content-Type' => 'text/plain;charset=UTF-8',
+        'Accept' => '*/*',
+        'Pragma' => 'no-cache',
+        'Cache-Control' => 'no-cache',
+        'Connection' => 'keep-alive'
       }
       @userlist = {}
       @userlist_mutex = Mutex.new
@@ -50,14 +64,14 @@ module Chatbot
       @ping_thread = nil
       @plugins = []
       @handlers = {
-          :message => [],
-          :join => [],
-          :part => [],
-          :kick => [],
-          :logout => [],
-          :ban => [],
-          :update_user => [],
-          :quitting => []
+        :message => [],
+        :join => [],
+        :part => [],
+        :kick => [],
+        :logout => [],
+        :ban => [],
+        :update_user => [],
+        :quitting => []
       }
     end
 
@@ -72,13 +86,18 @@ module Chatbot
 
     # Save the current configuration to disk
     def save_config
-      File.open(CONFIG_FILE, File::WRONLY) { |f| f.write(@config.to_yaml) }
+      File.open(CONFIG_FILE, File::WRONLY) do |f|
+        f.write(@config.to_yaml)
+      end
     end
 
     # Fetch important data from chat
     def fetch_chat_info
-      # @type [HTTParty::Response]
-      res = HTTParty.get("#{@base_url}/wikia.php?controller=Chat&format=json", :headers => @headers)
+      res = @api.get(
+        "#{@base_uri.path}/wikia.php?#{URI.encode_www_form({
+          :controller => 'Chat',
+          :format => 'json'
+        })}", @headers)
       # @type [Hash]
       data = JSON.parse(res.body, :symbolize_names => true)
       @key = data[:chatkey]
@@ -86,50 +105,76 @@ module Chatbot
       @mod = data[:isChatMod]
       @initialized = false
       @server = JSON.parse(
-        HTTParty.get(
-          @base_url +
-          '/api.php?action=query&meta=siteinfo&siprop=wikidesc&format=json'
+        @api.get(
+          "#{@base_uri.path}/api.php?#{URI.encode_www_form({
+            :action => 'query',
+            :meta => 'siteinfo',
+            :siprop => 'wikidesc',
+            :format => 'json'
+          })}"
         ).body,
         :symbolize_names => true
       )[:query][:wikidesc][:id] # >.>
       @request_options = {
-          :name => @config['user'],
-          :EIO => 2,
-          :transport => 'polling',
-          :key => @key,
-          :roomId => @room,
-          :serverId => @server
+        :name => @config['user'],
+        :EIO => 2,
+        :transport => 'polling',
+        :key => @key,
+        :roomId => @room,
+        :serverId => @server
       }
-      if @config.key?('dev')
-        self.class.base_uri "https://#{data[:chatServerHost]}:#{data[:chatServerPort]}/"
-      else
-        self.class.base_uri "https://#{data[:chatServerHost]}/"
+      @socket = Net::HTTP.new(data[:chatServerHost], 443)
+      @socket.use_ssl = true
+      @socket.keep_alive_timeout = 60
+      @socket.ssl_timeout = 60
+      Signal.trap('INT') do
+        quit
+      end
+      Signal.trap('TERM') do
+        quit
       end
       res = get
-      spl = res.match(/\d+:0(.*)$/)
+      spl = res.body.match(/\d+:0(.*)$/)
       if spl.nil?
         @running = false
         return
       end
       @request_options[:sid] = JSON.parse(spl.captures[0], :symbolize_names => true)[:sid]
-      @headers['Cookie'] = res.headers['set-cookie']
+      @headers['Cookie'] = res['Set-Cookie']
     end
 
     # Perform a GET request to the chat server
-    # @return [HTTParty::Response]
-    def get(path: '/socket.io/')
+    def get
       opts = @request_options.merge({:time_cachebuster => Time.now.to_ms.to_s + '-' + @time_cachebuster.to_s})
+      uri = URI("https://#{@socket.address}/socket.io/")
+      uri.query = URI.encode_www_form(opts)
       @time_cachebuster += 1
-      self.class.get(path, :query => opts, :headers => @headers)
+      @socket.get(uri, @headers)
     end
 
     # Perform a POST request to the chat server with the specified body
     # @param [Hash] body
     def post(body)
-      body = Util::format_message(body == :ping ? '2' : '42' + ["message", {:id => nil, :attrs => body}.to_json].to_json)
-      opts = @request_options.merge({:time_cachebuster => Time.now.to_ms.to_s + '-' + @time_cachebuster.to_s})
+      poster = Net::HTTP.new(@socket.address, @socket.port)
+      poster.use_ssl = true
+      poster.keep_alive_timeout = 60
+      poster.ssl_timeout = 60
+      body = Util::format_message(body == :ping ? '2' : "42#{[
+        'message',
+        {
+          :id => nil,
+          :attrs => body
+        }.to_json
+      ].to_json}")
+      opts = @request_options.merge({
+        :time_cachebuster => Time.now.to_ms.to_s + '-' + @time_cachebuster.to_s
+      })
+      uri = URI("https://#{@socket.address}/socket.io/")
+      uri.query = URI.encode_www_form(opts)
+      request = Net::HTTP::Post.new(uri.request_uri, @headers)
+      request.body = body
       @time_cachebuster += 1
-      self.class.post('/socket.io/', :query => opts, :body => body, :headers => @headers)
+      poster.request(request)
     end
 
     # Run the bot
@@ -137,13 +182,13 @@ module Chatbot
       while @running
         begin
           res = get
-          body = res.body
+          body = res.body.force_encoding('utf-8')
           if body.include? 'Session ID unknown'
             @running = false
             break
           end
           while body.length > 0
-            index = body.index(':')
+            index = body.index(':') 
             msgend = index + body[0..index].to_i
             msg = body[index + 1..msgend]
             body = body[msgend + 1..-1]
@@ -161,18 +206,22 @@ module Chatbot
           @running = false
         end
       end
-      @handlers[:quitting].each { |handler| handler.call(nil) }
-      @threads.each { |thr| thr.join }
+      @handlers[:quitting].each do |handler|
+        handler.call(nil)
+      end
+      @threads.each do |thr|
+        thr.join
+      end
       @ping_thread.kill unless @ping_thread.nil?
     end
 
     # Make a ping thread
     def ping_thr
-      @ping_thread = Thread.new {
+      @ping_thread = Thread.new do
         sleep 15
         post(:ping)
         ping_thr
-      }
+      end
     end
 
     # Sends a message to chat
@@ -191,6 +240,11 @@ module Chatbot
     def quit
       @running = false
       post(:msgType => :command, :command => :logout)
+      if @socket.started?
+        @socket.finish
+      end
+      puts 'Exiting...'
+      exit
     end
 
     # Bans a user from chat. Requires mod rights (or above)
