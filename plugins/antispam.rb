@@ -25,7 +25,7 @@ class Chatbot::AntiSpam
       'flood' => 1,
       'swear' => 1,
       'caps' => 1
-    }.merge(@config['points'])
+    }.merge(@config['points'] || {})
     if File.exists? 'antispam.yml'
       @data = YAML::load_file 'antispam.yml'
     else
