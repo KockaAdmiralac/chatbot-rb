@@ -7,7 +7,7 @@ class Chatbot::Admin
   match /^plugins/, :method => :list_plugins
   match /^ignore (.*)/, :method => :ignore
   match /^unignore (.*)/, :method => :unignore
-  match /^commands/, :method => :get_commands
+  match /^commands|^help/, :method => :get_commands
   match /^source|^src|^git(?:hub)?/, :method => :source
   match /^kick (.*)/, :method => :kick
   match /^ban ([^\s]+) (\d+)\s?(.*)/, :method => :ban
