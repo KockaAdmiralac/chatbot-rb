@@ -27,8 +27,8 @@ module Chatbot
         $logger.fatal "Config: #{CONFIG_FILE} not found!"
         exit
       end
-      @config1 = ERB.new File.new(File.join(__dir__, CONFIG_FILE)).read
-      @config = YAML.load @config1.result(binding)
+      erb = ERB.new File.new(File.join(__dir__, CONFIG_FILE)).read
+      @config = YAML.load erb.result(binding)
       if @config['domain'].nil? or @config['domain'].length == 0
         @config['domain'] = 'wikia.com'
       end
