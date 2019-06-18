@@ -14,7 +14,8 @@ class User
   attr_reader :name
 
   # @param [String] name
-  def initialize(name, mod = false, admin = false, staff = false)
+  def initialize(client, name, mod = false, admin = false, staff = false)
+    @client = client
     @name = name
     @mod = mod
     @admin = admin
