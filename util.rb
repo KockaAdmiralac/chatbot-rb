@@ -1,6 +1,4 @@
-require 'erb'
 require 'json'
-require 'yaml'
 module JSON
   def self.is_json?(foo)
     begin
