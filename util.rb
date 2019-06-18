@@ -13,6 +13,7 @@ end
 class User
   attr_reader :name
 
+  # @param [Instance] client
   # @param [String] name
   def initialize(client, name, mod = false, admin = false, staff = false)
     @client = client
@@ -27,7 +28,7 @@ class User
   #    - +:mod+ returns true if user is +:dev+, +:staff+, +:admin+, or +:mod+
   #    - +:admin+ returns true if user is +:dev+, +:staff+, or +:admin+
   #    - +:staff+ returns true if user is +:dev+ or +:staff+
-  #    - +:dev+ returns true if and only if <tt>@name == 'Sactage'</tt>
+  #    - +:dev+ returns true if and only if <tt>@name == 'KockaAdmiralac'</tt>, or if a dev is set via config, that user too
   # @param [Symbol] right
   # @return [TrueClass, FalseClass]
   def is?(right)
