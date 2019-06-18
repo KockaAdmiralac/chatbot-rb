@@ -41,7 +41,7 @@ class Chatbot::Admin
       if @client.userlist.key? target
         @client.userlist[target].ignore
       else
-        User.new(target).ignore
+        User.new(@client, target).ignore
       end
       @client.send_msg "#{user.name}: I'll now ignore all messages from #{target}."
     end
@@ -54,7 +54,7 @@ class Chatbot::Admin
       if @client.userlist.key? target
         @client.userlist[target].unignore
       else
-        User.new(target).unignore
+        User.new(@client, target).unignore
       end
       @client.send_msg "#{user.name}: I'll now listen to all messages from #{target}."
     end

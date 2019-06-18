@@ -13,17 +13,10 @@ module JSON
 end
 
 class User
-  CONFIG_FILE = 'config.yml'
   attr_reader :name
 
   # @param [String] name
   def initialize(name, mod = false, admin = false, staff = false)
-    unless File.exists? CONFIG_FILE
-        $logger.fatal "Config: #{CONFIG_FILE} not found!"
-        exit
-    end
-    erb = ERB.new File.new(File.join(__dir__, CONFIG_FILE)).read
-    @config = YAML.load erb.result(binding)
     @name = name
     @mod = mod
     @admin = admin
@@ -47,7 +40,7 @@ class User
       when :staff
         @staff or is? :dev
       when :dev
-        @name.eql? @config['dev'] || 'KockaAdmiralac'
+        @name.eql?('KockaAdmiralac') or (!@client.config['dev'].nil? and @name.eql?(@client.config['dev']))
       else
         false
     end
