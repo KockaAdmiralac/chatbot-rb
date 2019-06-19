@@ -13,7 +13,7 @@ end
 class User
   attr_reader :name
 
-  # @param [Instance] client
+  # @param [Client] client
   # @param [String] name
   def initialize(client, name, mod = false, admin = false, staff = false)
     @client = client
