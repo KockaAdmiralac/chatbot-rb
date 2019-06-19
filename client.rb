@@ -190,7 +190,7 @@ module Chatbot
             break
           end
           while body.length > 0
-            index = body.index(':') 
+            index = body.index(':')
             msgend = index + body[0..index].to_i
             msg = body[index + 1..msgend]
             body = body[msgend + 1..-1]
