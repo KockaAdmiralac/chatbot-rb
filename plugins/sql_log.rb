@@ -24,7 +24,8 @@ class SQLLog
     Mysql2::Client.new(:host      => @client.config[:sqlhost],
                        :username  => @client.config[:sqluser],
                        :password  => @client.config[:sqlpass],
-                       :database  => @client.config[:sqldb])
+                       :database  => @client.config[:sqldb],
+                       :port      => @client.config[:sqlport])
   end
 
   # @param [User] user

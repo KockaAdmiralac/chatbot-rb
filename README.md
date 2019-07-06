@@ -1,5 +1,5 @@
 # chatbot-rb
-A plugin-based bot framework in Ruby for [Fandom's](https://c.wikia.com/) [Special:Chat](https://github.com/Wikia/app/tree/dev/extensions/wikia/Chat2) extension. Originally written by [Kerri Amber](https://github.com/kerriamber) and currently maintained by [KockaAdmiralac](https://github.com/KockaAdmiralac).
+A plugin-based bot framework in Ruby for [Fandom's](https://c.fandom.com/) [Special:Chat](https://github.com/Wikia/app/tree/dev/extensions/wikia/Chat2) extension. Originally written by [Kerri Amber](https://github.com/kerriamber) and currently maintained by [KockaAdmiralac](https://github.com/KockaAdmiralac).
 
 ## Pull Requests / Issues
 If you want to create a PR or open an issue here on GitHub, *that is fine* (and most definitely encouraged!) - however, *please ping me with `@KockaAdmiralac` somewhere in your issue/PR description*. GitHub unfortunately *does not provide a way for me to get notifications of new PRs/issues via e-mail*, unless I am pinged with `@KockaAdmiralac`. Also, while not required, it would be helpful to me if you left your Fandom username so I can contact you further if need be.

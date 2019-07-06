@@ -1,3 +1,4 @@
+require 'erb'
 require 'json'
 require 'logger'
 require 'net/http'
@@ -26,9 +27,10 @@ module Chatbot
         $logger.fatal "Config: #{CONFIG_FILE} not found!"
         exit
       end
-      @config = YAML.load_file(File.join(__dir__, CONFIG_FILE))
+      erb = ERB.new File.new(File.join(__dir__, CONFIG_FILE)).read
+      @config = YAML.load erb.result(binding)
       if @config['domain'].nil? or @config['domain'].length == 0
-        @config['domain'] = 'wikia.com'
+        @config['domain'] = 'fandom.com'
       end
       if @config['wiki'].include? '.'
         @base_uri = URI.parse("http://#{@config['wiki']}.#{@config['domain']}")
@@ -188,7 +190,7 @@ module Chatbot
             break
           end
           while body.length > 0
-            index = body.index(':') 
+            index = body.index(':')
             msgend = index + body[0..index].to_i
             msg = body[index + 1..msgend]
             body = body[msgend + 1..-1]

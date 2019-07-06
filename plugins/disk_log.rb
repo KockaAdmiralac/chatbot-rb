@@ -36,14 +36,14 @@ class Chatbot::DiskLog
   # @param [Hash] data
   def log_join(data)
     @logfile_mutex.synchronize do
-      File.open("chat.log", 'a') {|f| f.write("\n" + Util::ts + " -!- #{data['attrs']['name']} [~chat@wikia/#{data['attrs']['name'].gsub(/ /, '-')}] has joined #Special:Chat")}
+      File.open("chat.log", 'a') {|f| f.write("\n" + Util::ts + " -!- #{data['attrs']['name']} [~chat@fandom/#{data['attrs']['name'].gsub(/ /, '-')}] has joined #Special:Chat")}
     end
   end
 
   # @param [Hash] data
   def log_part(data)
     @logfile_mutex.synchronize do
-      File.open("chat.log", 'a') {|f| f.write("\n" + Util::ts + " -!- #{data['attrs']['name']} [~chat@wikia/#{data['attrs']['name'].gsub(/ /, '-')}] has left #Special:Chat [Leaving]")}
+      File.open("chat.log", 'a') {|f| f.write("\n" + Util::ts + " -!- #{data['attrs']['name']} [~chat@fandom/#{data['attrs']['name'].gsub(/ /, '-')}] has left #Special:Chat [Leaving]")}
     end
   end
 
