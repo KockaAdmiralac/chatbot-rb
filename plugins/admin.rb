@@ -9,8 +9,8 @@ class Chatbot::Admin
   match /^unignore (.*)/, :method => :unignore
   match /^commands|^help/, :method => :get_commands
   match /^source|^src|^git(?:hub)?/, :method => :source
-  match /^kick (.*)/, :method => :kick
-  match /^ban ([^\s]+) (\d+)\s?(.*)/, :method => :ban
+  match /^kick(?:user)? (.*)/, :method => :kick
+  match /^ban(?:user) ([^\s]+) (\d+)\s?(.*)/, :method => :ban
 
   # @param [User] user
   def quit(user)
